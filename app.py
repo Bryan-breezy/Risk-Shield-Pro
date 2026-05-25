@@ -1,150 +1,147 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime
 import numpy as np
 
-# Set up clean, professional page styling
-st.set_page_config(page_title="Risk Shield Pro", page_icon="🛡️", layout="centered")
+# ==================== PAGE CONFIG ====================
+st.set_page_config(
+    page_title="Risk Shield Pro",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Custom CSS for dark professional styling
+# ==================== CUSTOM CSS ====================
 st.markdown("""
     <style>
-    .big-font { font-size:24px !important; font-weight: bold; color: #1E3A8A; }
-    .metric-box { padding: 15px; background-color: #F3F4F6; border-radius: 8px; border-left: 5px solid #3B82F6; }
-    .danger-box { padding: 15px; background-color: #FEE2E2; border-radius: 8px; border-left: 5px solid #EF4444; color: #991B1B; }
-    .success-box { padding: 15px; background-color: #DCFCE7; border-radius: 8px; border-left: 5px solid #22C55E; color: #166534; }
-    .warning-box { padding: 15px; background-color: #FEF3C7; border-radius: 8px; border-left: 5px solid #F59E0B; color: #92400E; }
+    .main { background-color: #0f172a; color: #e2e8f0; }
+    .stApp { background-color: #0f172a; }
+    .metric-card {
+        background-color: #1e2937;
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 5px solid #3b82f6;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .success-box { background-color: #14532d; border-left: 5px solid #22c55e; }
+    .warning-box { background-color: #78350f; border-left: 5px solid #f59e0b; }
+    .danger-box { background-color: #7f1d1d; border-left: 5px solid #ef4444; }
+    h1 { color: #60a5fa; }
+    .stDataFrame { background-color: #1e2937; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🛡️ Risk Shield Pro: Statistical Pattern Analyzer")
-st.markdown("A disciplined, probability-based analytical dashboard designed to track trends, isolate risky house environments, and manage capital scientifically.")
+st.title("🛡️ Risk Shield Pro")
+st.markdown("**Professional Statistical Pattern Analyzer** — Discipline meets Probability")
 
-# Initialize the session database if it doesn't exist
+# Initialize session state
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# --- SIDEBAR: CAPITAL CONTROL & DISCIPLINE MANAGER ---
-st.sidebar.header("Capital & Discipline Controls")
-st.sidebar.markdown("Set your boundaries before launching a session. These limits act as a hard systemic barrier.")
+# ==================== SIDEBAR ====================
+st.sidebar.header("💰 Capital Controls")
+target_profit = st.sidebar.number_input("Target Profit (Ksh)", value=2500, step=500, min_value=500)
+stop_loss = st.sidebar.number_input("Stop Loss Limit (Ksh)", value=1200, step=200, min_value=200)
+current_pnl = st.sidebar.number_input("Current Session P&L (Ksh)", value=0, step=100)
 
-target_profit = st.sidebar.number_input("Target Profit Boundary (Ksh)", value=2000, step=500, min_value=100)
-stop_loss = st.sidebar.number_input("Hard Stop-Loss Limit (Ksh)", value=1000, step=200, min_value=100)
-current_balance = st.sidebar.number_input("Current Session Net Gain/Loss (Ksh)", value=0, step=100)
-# Enforce strict code-driven warnings based on money management rules
-if current_balance >= target_profit:
-    st.sidebar.balloons()
-    st.sidebar.success("🏆 BREAKPOINT ACHIEVED: You have reached your target profit boundary. Terminate the session immediately and secure your capital.")
-elif current_balance <= -stop_loss:
-    st.sidebar.error("🚨 CRITICAL STOP-LOSS REACHED: Hard boundary breached. Shut down the system. Continuing runs under skewed platform distribution leads to total capital depletion.")
+if current_pnl >= target_profit:
+    st.sidebar.success("🎉 TARGET ACHIEVED! Secure Profits.")
+elif current_pnl <= -stop_loss:
+    st.sidebar.error("🚨 STOP LOSS BREACHED - SESSION TERMINATED")
 
-# --- MAIN INTERFACE: LIVE DATA LOGGING ---
-st.subheader("📥 Real-Time Multiplier Entry")
-st.markdown("Input the exact bust values as they appear chronologically on your history ticker.")
+# ==================== TABS ====================
+tab1, tab2, tab3 = st.tabs(["📥 Live Logging", "📊 Analytics", "📜 History"])
 
-with st.form("input_form", clear_on_submit=True):
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        new_val = st.number_input("Bust Multiplier:", min_value=1.00, value=1.00, step=0.01, format="%.2f", help="Type the exact decimal point where the curve crashed.")
-    with col2:
-        submit = st.form_submit_button("Log Entry")
+with tab1:
+    st.subheader("Log New Multiplier")
+    with st.form("log_form", clear_on_submit=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            multiplier = st.number_input("Bust Multiplier", min_value=1.0, value=1.0, step=0.01, format="%.2f")
+        with col2:
+            submitted = st.form_submit_button("Log Entry", type="primary")
+        
+        if submitted:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            st.session_state.history.insert(0, {"time": timestamp, "multiplier": multiplier})
+            st.success(f"Logged: {multiplier}x at {timestamp}")
 
-if submit:
-    # Prepend new value to keep the latest run at index 0 (matching natural chronological screen layouts)
-    st.session_state.history.insert(0, new_val)
-
-# Exit early if no data has been entered yet
-if not st.session_state.history:
-    st.info("💡 **System Awaiting Data:** Input the last 5 to 10 historical numbers from your current game screen into the entry box above to calibrate the risk engines.")
-    st.stop()
-
-# --- AUTOMATED CALCULATION ENGINE ---
-history = st.session_state.history
-total_tracked = len(history)
-
-# Categorize historical distribution parameters
-reds = [x for x in history if x < 2.00]
-greens = [x for x in history if x >= 2.00]
-instant_crashes = [x for x in history if x <= 1.05]
-
-red_pct = (len(reds) / total_tracked) * 100 if total_tracked > 0 else 0
-green_pct = (len(greens) / total_tracked) * 100 if total_tracked > 0 else 0
-
-# Calculate current consecutive streaks
-current_streak_type = "Red (<2.00x)" if history[0] < 2.00 else "Green (≥2.00x)"
-streak_count = 0
-for val in history:
-    is_red = val < 2.00
-    if (current_streak_type.startswith("Red") and is_red) or (current_streak_type.startswith("Green") and not is_red):
-        streak_count += 1
+with tab2:
+    st.subheader("Analytics Dashboard")
+    
+    if st.session_state.history:
+        df = pd.DataFrame(st.session_state.history)
+        df['multiplier'] = df['multiplier'].astype(float)
+        
+        # Metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Rounds", len(df))
+        with col2:
+            red_pct = (df['multiplier'] < 2.0).mean() * 100
+            st.metric("Red (<2.0x)", f"{red_pct:.1f}%")
+        with col3:
+            avg_mult = df['multiplier'].mean()
+            st.metric("Average Multiplier", f"{avg_mult:.2f}x")
+        with col4:
+            max_mult = df['multiplier'].max()
+            st.metric("Highest", f"{max_mult:.2f}x")
+        
+        # Trend Chart
+        st.plotly_chart(go.Figure(
+            data=go.Scatter(
+                x=list(range(len(df))),
+                y=df['multiplier'],
+                mode='lines+markers',
+                name='Multiplier',
+                line=dict(color='#60a5fa')
+            ),
+            layout=go.Layout(
+                title="Multiplier Trend",
+                xaxis_title="Round (Newest → Oldest)",
+                yaxis_title="Multiplier",
+                template="plotly_dark",
+                height=400,
+                shapes=[dict(type="line", y0=2, y1=2, x0=0, x1=len(df), line=dict(color="red", dash="dash"))]
+            )
+        ), use_container_width=True)
+        
+        # AI Recommendation
+        latest = df.iloc[0]['multiplier']
+        streak = 1
+        for i in range(1, len(df)):
+            if (df.iloc[i]['multiplier'] < 2.0) == (latest < 2.0):
+                streak += 1
+            else:
+                break
+        
+        st.subheader("🤖 AI Risk Recommendation")
+        if latest >= 12.0:
+            st.error("🚨 POST-SPIKE RECOVERY PHASE — Sit out next 2-3 rounds")
+        elif latest < 2.0 and streak >= 4:
+            st.success("🟢 STREAK BREAK LIKELY — Consider tight cashout (1.35x - 1.55x)")
+        elif latest >= 2.0 and streak >= 4:
+            st.warning("⚠️ GREEN STREAK EXTENDED — High risk of correction")
+        else:
+            st.info("⚖️ Normal Variance — Play conservatively")
     else:
-        break
+        st.info("No data yet. Log some multipliers in the Live Logging tab.")
 
-# --- ANALYTICAL VISUALIZATIONS ---
-st.markdown("---")
-st.subheader("📊 Active Mathematical Matrix")
+with tab3:
+    st.subheader("Session History")
+    if st.session_state.history:
+        df_display = pd.DataFrame(st.session_state.history)
+        st.dataframe(df_display, use_container_width=True)
+        
+        csv = df_display.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download CSV", csv, "risk_shield_history.csv", "text/csv")
+    else:
+        st.info("History is empty")
 
-m_col1, m_col2, m_col3 = st.columns(3)
-with m_col1:
-    st.markdown(f"<div class='metric-box'><b>Rounds Logged</b><br><span style='font-size:24px; font-weight:bold;'>{total_tracked}</span></div>", unsafe_allow_html=True)
-with m_col2:
-    st.markdown(f"<div class='metric-box'><b>Red Percentage</b><br><span style='font-size:24px; font-weight:bold; color:#EF4444;'>{red_pct:.1f}%</span><br><small>Macro Target: ~50%</small></div>", unsafe_allow_html=True)
-with m_col3:
-    st.markdown(f"<div class='metric-box'><b>Current Streak</b><br><span style='font-size:24px; font-weight:bold; color:#22C55E;'>{streak_count}x</span><br><small>{current_streak_type}</small></div>", unsafe_allow_html=True)
-
-# --- DYNAMIC RISK RECOMMENDATION ENGINE ---
-st.markdown("---")
-st.subheader("🤖 Algorithmic Risk Recommendation")
-
-if history[0] >= 12.00:
-    st.markdown("""
-        <div class='danger-box'>
-            <b>🚨 CRITICAL EXHAUSTION DETECTED (POST-SPIKE SYSTEM RECOVERY)</b><br>
-            A major multiplier spike just terminated. Statistically, random number generation servers immediately cluster extremely low pullbacks (under 1.50x) following high payout dispersion to protect the house mathematical margin. <br><br>
-            <b>STRATEGIC DIRECTIVE:</b> EVADE the next 2 to 3 rounds entirely. Let other players drain their balances fighting the initial correction curve.
-        </div>
-    """, unsafe_allow_html=True)
-
-elif current_streak_type.startswith("Red") and streak_count >= 4:
-    st.markdown(f"""
-        <div class='success-box'>
-            <b>🟢 OPPOSITE BREAKING TREND ALERT (PROBABILITY REBOUND)</b><br>
-            The system has maintained {streak_count} consecutive early losses under 2.00x. While every round is independent, long consecutive strings of low numbers are mathematically unsustainable over extended periods.<br><br>
-            <b>STRATEGIC DIRECTIVE:</b> Prepare an automated execution position. Engage a highly strict <b>Auto-Cashout benchmark capped tightly between 1.30x and 1.50x</b> to capture the imminent streak breakage safely.
-        </div>
-    """, unsafe_allow_html=True)
-
-elif current_streak_type.startswith("Green") and streak_count >= 4:
-    st.markdown(f"""
-        <div class='warning-box'>
-            <b>⚠️ ACCUMULATED HOUSE DEFICIT WARNING (GREED LIMIT REACHED)</b><br>
-            The platform has paid out {streak_count} consecutive times above 2.00x. The variance limit is approaching a cliff, meaning an aggressive pullback cluster or a forced 1.00x instant crash is highly probable within the immediate 2-round window.<br><br>
-            <b>STRATEGIC DIRECTIVE:</b> Stand down, lower stakes by 75%, or sit out until an explicit red crash clears the platform liabilities.
-        </div>
-    """, unsafe_allow_html=True)
-
-else:
-    st.markdown("""
-        <div class='metric-box' style='border-left: 5px solid #6B7280;'>
-            <b>⚖️ BALANCED RANDOM VARIANCE</b><br>
-            The distribution metrics indicate normal, standard rolling randomness. The trend is neither heavily overextended nor tightly clustered.<br><br>
-            <b>STRATEGIC DIRECTIVE:</b> No clear structural edge present. If choosing to execute positions, rely exclusively on conservative automated thresholds (e.g., 1.50x). Never click manual cashout triggers under fluctuating ping latency.
-        </div>
-    """, unsafe_allow_html=True)
-
-# --- TRACKED DATA FEEDS ---
-st.markdown("---")
-st.subheader("📜 Current Session Data Ledger")
-st.markdown("Below is the chronological feed of your logged parameters. Keep monitoring for instant house pulls (1.00x - 1.05x).")
-
-# Clean tabular rendering
-df = pd.DataFrame({"Round (Order: Newest First)": range(1, total_tracked + 1), "Multiplier Value": history})
-st.dataframe(df, use_container_width=True)
-
-# Instant crash count metrics
-if instant_crashes:
-    st.caption(f"⚠️ Warning: {len(instant_crashes)} instant house crashes (≤1.05x) have been logged in this session. These values are mathematically un-escapable.")
-
-# Reset configuration
-if st.button("Purge Active Session Data"):
+# Reset Button
+if st.button("🗑️ Clear All Data", type="secondary"):
     st.session_state.history = []
     st.rerun()
+
+st.caption("Risk Shield Pro • Built for disciplined decision making")
